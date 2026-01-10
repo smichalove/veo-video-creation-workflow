@@ -1,0 +1,20 @@
+venv-wan/
+__pycache__/
+*.mp4
+*.jpg
+*.png
+*.legacy
+temp_clip_*.mp4
+auth/
+.vscode/
+veo vid geneation.code-workspace
+config.bat
+config.sh
+*.mov
+    
+# Ignore XML files
+*.xml
+
+# Ignore all subdirectories
+*/
+
