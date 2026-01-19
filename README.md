@@ -130,22 +130,51 @@ python generate_veo_video_v3.py <mode> [options]
 *   `--cast <path>`: Path to the cast file (defaults to `cast.md`).
 *   `--output-dir <dir>`: Directory to save rendered clips (defaults to `rendered_clips`).
 *   `--reference-image <path>`: Path to a global reference image.
-*   `--file-prefix <PREFIX>`: A short prefix for AI-generated filenames (defaults to `EVO`).
 *   `--duration <seconds>`: Duration of the generated video in seconds (defaults to 8).
 *   `--overwrite`: Overwrite existing video files.
 
 ### Examples
 ```bash
 # List all scenes from the example storyboard
-python generate_veo_videos.py --list-scenes --storyboard example_storyboard.md --cast example_cast.md
+python generate_veo_video_v3.py --list-scenes --storyboard example_storyboard.md --cast example_cast.md
 
 # Generate only scene 2 from the default files
-python generate_veo_videos.py --scene-number 2
+python generate_veo_video_v3.py --scene-number 2
 
-# Generate all scenes with a custom prefix, overwriting any existing files
-python generate_veo_videos.py --run-all --overwrite --file-prefix "RODEO"
 # Generate all scenes, overwriting any existing files
-python generate_veo_videos.py --run-all --overwrite
+python generate_veo_video_v3.py --run-all --overwrite
+```
+
+## Customizing Your Project
+
+While the script is powerful out-of-the-box, you can easily tailor it to your specific creative needs. Here are the most common customizations for `generate_veo_video_v3.py`:
+
+### 1. Create Your Own Storyboard and Cast
+
+The easiest way to start your own project is to:
+1.  Copy `example_cast.md` to `my_cast.md`.
+2.  Copy `example_storyboard.md` to `my_storyboard.md`.
+3.  Edit these new files with your own characters and scene descriptions.
+4.  Run the script pointing to your new files:
+    ```bash
+    python generate_veo_video_v3.py --run-all --cast my_cast.md --storyboard my_storyboard.md
+    ```
+
+### 2. Change the Filename Prefix
+
+The script uses an AI model to generate descriptive filenames, which are prefixed with `EVO_` by default. If you want to change this prefix (e.g., to `MYPROJ_`), you'll need to make a small edit to the script's `generate_scene_filename()` function. Look for the `system_prompt` and the line `if not filename.startswith("EVO_"):` and replace `EVO` with your desired prefix.
+
+### 3. Adjust the Negative Prompt
+
+The script includes a strong negative prompt to prevent the AI from adding unwanted transitions or artifacts. You can customize this in the `generate_scene_with_veo()` function by finding the `negative_prompt` variable and adding or removing terms.
+
+### 4. Update the Veo Model
+
+As Google releases new versions of Veo, you can update the script to use them by modifying the `VEO_MODEL_NAME` constant at the top of the file.
+
+## Helper Scripts
+
+This repository also includes a couple of Windows batch files for convenience:
 ```
 
 ## Helper Scripts
