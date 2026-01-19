@@ -1,20 +1,15 @@
-venv-wan/
+# Python
 __pycache__/
+*.pyc
+venv/
+*.env
+
+# Output files
 *.mp4
 *.jpg
 *.png
-*.legacy
-temp_clip_*.mp4
-auth/
+rendered_clips/
+
+# IDE folders
 .vscode/
-veo vid geneation.code-workspace
-config.bat
-config.sh
-*.mov
-    
-# Ignore XML files
-*.xml
-
-# Ignore all subdirectories
-*/
-
+.idea/
