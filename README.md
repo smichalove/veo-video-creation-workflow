@@ -6,7 +6,7 @@ This repository provides a template for setting up your own automated video crea
 
 ## Which Script to Use?
 
-This repository contains several versions of the generation script, showing the evolution of the workflow. For new projects, you should almost always use `generate_veo_videos.py`.
+This repository contains several versions of the generation script, showing the evolution of the workflow. For new projects, you should almost always use `generate_veo_video_v3.py`.
 
 *   **`generate_veo_video_v3.py` (Recommended)**: The primary, most advanced script. It supports reference images, AI-powered filenaming (with a hardcoded `EVO_` prefix), dynamic reloading, and is fully configurable via the command line. **The rest of this README focuses on this script.**
 
@@ -109,7 +109,7 @@ List each scene with a leading `-`. Use `{KEYS}` from your cast file. Specify re
 - {JESSE_DESC} bursts from the chute on her horse, racing against the clock...
 
 # Scene 2
-- [IMAGE: "path/to/ref.jpg"] At dusk, {MARIA_DESC} performs a daring trick...
+- [IMAGE: path/to/ref.jpg] At dusk, {MARIA_DESC} performs a daring trick...
 ```
 
 ## Usage
@@ -159,6 +159,7 @@ The easiest way to start your own project is to:
     ```bash
     python generate_veo_video_v3.py --run-all --cast my_cast.md --storyboard my_storyboard.md
     ```
+    
 
 ### 2. Change the Filename Prefix
 
