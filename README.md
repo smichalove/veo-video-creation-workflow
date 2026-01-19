@@ -1,15 +1,37 @@
 # Veo Batch Video Generation Workflow
 
-`generate_veo_videos.py` is a powerful, command-line Python script designed to automate the batch generation of cinematic video scenes using Google's Veo model via the Vertex AI SDK. It streamlines the creative workflow by reading scene descriptions and character details from simple markdown files, managing the entire generation process, and organizing the output.
+`generate_veo_video_v3.py` is a powerful, command-line Python script designed to automate the batch generation of cinematic video scenes using Google's Veo model via the Vertex AI SDK. It streamlines the creative workflow by reading scene descriptions and character details from simple markdown files, managing the entire generation process, and organizing the output.
 
 This repository provides a template for setting up your own automated video creation pipeline.
+
+## Which Script to Use?
+
+This repository contains several versions of the generation script, showing the evolution of the workflow. For new projects, you should almost always use `generate_veo_videos.py`.
+
+*   **`generate_veo_video_v3.py` (Recommended)**: The primary, most advanced script. It supports reference images, AI-powered filenaming (with a hardcoded `EVO_` prefix), dynamic reloading, and is fully configurable via the command line. **The rest of this README focuses on this script.**
+
+*   **`generate_veo_video_v2.py` (Legacy)**: A simpler version that reads external `storyboard.md` and `cast.md` files but lacks support for reference images and advanced filenaming. It outputs files like `veo_scene_1.mp4`.
+
+*   **`generate_veo_videos.py` (Legacy)**: An earlier version of the script, similar in function to `v2`. It reads from external markdown files but lacks the more advanced features of `v3` like reference images and AI-powered filenaming.
+
+*   **`generate_veo_video_ext.py` (Legacy Example)**: A very basic script with hardcoded scenes inside the `.py` file. Its main purpose is to serve as a simple example of how the video *extension* feature (passing a video to generate a continuation) was used.
+
+## Key Improvements
+
+This script (`generate_veo_video_v3.py`) represents a significant upgrade over previous versions, focusing on flexibility, automation, and a more professional workflow. Key enhancements include:
+
+*   **Reference Image Support**: Guide the AI with a starting image for better consistency and control, specified either globally (`--reference-image`) or per-scene (`[IMAGE: path]`).
+*   **AI-Powered Filenaming**: Instead of generic `scene_1.mp4` files, the script now uses Gemini to generate descriptive, editor-friendly filenames like `EVO_010_ACTION_CAST.mp4`.
+*   **Dynamic Reloading**: When using `--run-all`, the script reloads the storyboard and cast files before each scene. This allows you to make on-the-fly edits to your project without stopping the generation process.
+*   **Enhanced Flexibility**: All major configurations (file paths, output directory, duration) are now controlled via command-line arguments, removing the need to edit the script itself.
+*   **Greater Robustness**: Improved error handling for API issues, content safety filters, and file-not-found errors, with a detailed summary at the end of each run.
 
 ## Features
 
 *   **Storyboard-Driven Generation**: Define all your scenes in a simple `storyboard.md` file.
 *   **Dynamic Cast Templating**: Create a `cast.md` file to define characters. Use placeholders like `{CHARACTER_NAME}` in your storyboard for easy substitution.
 *   **Reference Image Support**: Use a global reference image for all scenes or specify a unique image for each scene directly in the storyboard using `[IMAGE: path/to/image.jpg]`.
-*   **AI-Powered Filenaming**: Automatically generates descriptive, editor-friendly filenames (e.g., `MYPROJ_010_ACTION_CAST.mp4`) by using a Gemini model to analyze each scene's prompt.
+*   **AI-Powered Filenaming**: Automatically generates descriptive, editor-friendly filenames (e.g., `EVO_010_ACTION_CAST.mp4`) by using a Gemini model to analyze each scene's prompt.
 *   **Flexible Execution Modes**:
     *   `--run-all`: Generate all scenes sequentially.
     *   `--scene-number <N>`: Generate only a single, specific scene.
@@ -95,7 +117,7 @@ List each scene with a leading `-`. Use `{KEYS}` from your cast file. Specify re
 Run the script from your terminal using `python`.
 
 ```bash
-python generate_veo_videos.py <mode> [options]
+python generate_veo_video_v3.py <mode> [options]
 ```
 
 ### Modes (Choose one)
@@ -122,4 +144,14 @@ python generate_veo_videos.py --scene-number 2
 
 # Generate all scenes with a custom prefix, overwriting any existing files
 python generate_veo_videos.py --run-all --overwrite --file-prefix "RODEO"
+# Generate all scenes, overwriting any existing files
+python generate_veo_videos.py --run-all --overwrite
+```
+
+## Helper Scripts
+
+This repository also includes a couple of Windows batch files for convenience:
+
+*   `init_git_repo.bat`: A helper script to initialize a new Git repository in the project folder and create a standard `.gitignore` file.
+*   `push_to_github.bat`: A helper script to stage, commit, and push changes to a remote GitHub repository.
 ```
