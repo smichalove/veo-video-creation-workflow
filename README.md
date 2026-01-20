@@ -173,3 +173,9 @@ The script includes a strong negative prompt to prevent the AI from adding unwan
 
 As Google releases new versions of Veo, you can update the script to use them by modifying the `VEO_MODEL_NAME` constant at the top of the file.
 ```
+
+
+## Keywords
+
+Google Veo, Veo Workflow, AI Video Generation, Vertex AI, Batch Video Creation, Python Script, Automated Video Production, Filmmaking AI, Generative AI, Google Cloud Platform.
+```
