@@ -172,16 +172,4 @@ The script includes a strong negative prompt to prevent the AI from adding unwan
 ### 4. Update the Veo Model
 
 As Google releases new versions of Veo, you can update the script to use them by modifying the `VEO_MODEL_NAME` constant at the top of the file.
-
-## Helper Scripts
-
-This repository also includes a couple of Windows batch files for convenience:
-```
-
-## Helper Scripts
-
-This repository also includes a couple of Windows batch files for convenience:
-
-*   `init_git_repo.bat`: A helper script to initialize a new Git repository in the project folder and create a standard `.gitignore` file.
-*   `push_to_github.bat`: A helper script to stage, commit, and push changes to a remote GitHub repository.
 ```

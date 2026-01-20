@@ -13,3 +13,6 @@ rendered_clips/
 # IDE folders
 .vscode/
 .idea/
+
+# Scripts
+*.bat
