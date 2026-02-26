@@ -45,7 +45,7 @@ This script (`generate_veo_video_v3.py`) represents a significant upgrade over p
 
 *   **Storyboard-Driven Generation**: Define all your scenes in a simple `storyboard.md` file.
 *   **Dynamic Cast Templating**: Create a `cast.md` file to define characters. Use placeholders like `{CHARACTER_NAME}` in your storyboard for easy substitution.
-*   **Reference Image Support**: Use a global reference image for all scenes or specify a unique image for each scene directly in the storyboard using `[IMAGE: path/to/image.jpg]`.
+*   **Reference Image Support**: Use a global reference image for all scenes or specify a unique image for each scene directly in the storyboard or cast file using `[IMAGE: path/to/image.jpg]`.
 *   **AI-Powered Filenaming**: Automatically generates descriptive, editor-friendly filenames (e.g., `EVO_010_ACTION_CAST.mp4`) by using a Gemini model to analyze each scene's prompt.
 *   **Flexible Execution Modes**:
     *   `--run-all`: Generate all scenes sequentially.
@@ -193,4 +193,5 @@ As Google releases new versions of Veo, you can update the script to use them by
 ## Keywords
 
 Google Veo, Veo Workflow, AI Video Generation, Vertex AI, Batch Video Creation, Python Script, Automated Video Production, Filmmaking AI, Generative AI, Google Cloud Platform.
+
 ```
