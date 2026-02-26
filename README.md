@@ -15,7 +15,7 @@ This repository provides a complete, open-source template for setting up your ow
 * **Stop Click-and-Waiting**: Instead of manually generating one video at a time in a web interface, write your entire film's script in Markdown and let your computer render it all overnight.
 * **Character Consistency**: Define your cast once and inject them into any scene using simple variables like `{HERO_DESC}`.
 * **Prompt Optimization**: The advanced `v4` script automatically uses Gemini to rewrite and optimize your human-readable prompts into language that the Veo video model understands best.
-* **Cost Efficiency**: Configurable options to skip audio generation or control video length help you manage your Vertex AI credits.
+* **Cost Efficiency (No Audio by Default)**: This workflow explicitly **removes audio generation** from the AI pipeline (`generate_audio=False`). Veo audio generation is significantly more expensive and time-consuming, and this script assumes you will add sound during post-production. You also have configurable options to control video length to further manage your Vertex AI credits.
 
 ## Which Script to Use?
 
@@ -53,7 +53,7 @@ This script (`generate_veo_video_v3.py`) represents a significant upgrade over p
     *   `--list-scenes`: Preview all parsed scenes without generating.
 *   **Robust Error Handling**: Includes retries for network issues, graceful handling of content safety filter blocks, and clear error messages.
 *   **Dynamic Reloading**: When using `--run-all`, the script reloads the storyboard and cast files before each scene, allowing you to make on-the-fly edits.
-*   **Cost Optimization**: Configured by default to disable audio generation (`generate_audio=False`).
+*   **Cost Optimization (No Audio)**: Configured by default to completely disable audio generation (`generate_audio=False`) to save significant Vertex AI costs and rendering time.
 *   **Cloud Storage Integration**: Automatically downloads generated videos from a specified Google Cloud Storage bucket.
 
 ## Prerequisites
