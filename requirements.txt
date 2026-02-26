@@ -1,2 +1,2 @@
 google-genai
-Pillow
+Pillow>=10.0.1
