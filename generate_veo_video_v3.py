@@ -17,12 +17,13 @@ import platform
 import re
 import glob
 from PIL import Image
+import qrcode
 import io
 import google.genai as genai
 from google.genai import types
 
 # --- Configuration ---
-VEO_MODEL_NAME = "veo-3.1-fast-generate-preview"
+VEO_MODEL_NAME = "veo-3.1-generate-preview" # Changed to higher-end model for commercial quality
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
 LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
 
@@ -32,8 +33,38 @@ GCS_BUCKET_URI = os.environ.get("GCS_BUCKET_URI")
 CAST_FILE = os.environ.get("CAST_FILE", "cast.md")
 STORYBOARD_FILE = os.environ.get("STORYBOARD_FILE", "storyboard.md")
 
+def _load_text_file_robustly(filename):
+    """Loads a text file, attempting to decode with UTF-8 and falling back to UTF-16.
+
+    This handles common text editor saving formats on Windows, including BOM.
+
+    Args:
+        filename (str): The path to the text file to load.
+
+    Returns:
+        list[str]: A list of lines from the file.
+
+    Raises:
+        IOError: If the file cannot be read or decoded.
+    """
+    try:
+        # The most common and correct encoding. 'utf-8-sig' handles BOM.
+        with open(filename, "r", encoding="utf-8-sig") as f:
+            return f.readlines()
+    except UnicodeDecodeError:
+        # If the above fails, it's often because the file was saved as UTF-16.
+        print(f"    - ⚠️  UTF-8 decoding failed for '{os.path.basename(filename)}'. Falling back to UTF-16.")
+        try:
+            with open(filename, "r", encoding="utf-16") as f:
+                return f.readlines()
+        except Exception as e:
+            # If both fail, we raise an error.
+            raise IOError(f"Could not decode file '{filename}' with UTF-8 or UTF-16.") from e
+    except Exception as e:
+        raise IOError(f"Could not read file '{filename}'.") from e
+
 def load_cast(filename=CAST_FILE):
-    """Reads a cast markdown file and parses character descriptions into a dictionary.
+    """Reads a cast markdown file and parses character descriptions and associated images into a dictionary.
 
     The function expects a file where each line is in the format 'KEY: Description'.
     It ignores empty lines and lines starting with '#'.
@@ -42,25 +73,40 @@ def load_cast(filename=CAST_FILE):
         filename (str): The path to the cast markdown file.
 
     Returns:
-        dict: A dictionary mapping character keys to their descriptions.
+        dict: A dictionary mapping character keys to their descriptions and a list of image paths.
     """
+    print(f"Loading cast from {filename}...")
     cast = {}
     if not os.path.exists(filename):
         print(f"⚠️  Cast file '{filename}' not found. Using empty cast.")
         return cast
 
-    with open(filename, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            
-            # Expecting format KEY: Description
-            parts = line.split(":", 1)
-            if len(parts) == 2:
-                key = parts[0].strip()
-                value = parts[1].strip()
-                cast[key] = value
+    try:
+        lines = _load_text_file_robustly(filename)
+    except IOError as e:
+        print(f"❌ Error loading cast file: {e}")
+        return cast
+
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        
+        # Expecting format KEY: Description
+        parts = line.split(":", 1)
+        if len(parts) == 2:
+            key = parts[0].strip()
+            value = parts[1].strip()
+            char_data = {"description": value, "image_paths": []}
+
+            # Extract all image tags from the cast description
+            image_matches = re.findall(r'\[IMAGE:\s*(.*?)\]', value, re.IGNORECASE)
+            if image_matches:
+                char_data["image_paths"] = [match.strip().strip('"').strip("'") for match in image_matches]
+                char_data["description"] = re.sub(r'\[IMAGE:\s*(.*?)\]', '', value, flags=re.IGNORECASE).strip()
+                print(f"  - Found {len(char_data['image_paths'])} character images for {key}: {char_data['image_paths']}")
+
+            cast[key] = char_data
     return cast
 
 def load_storyboard(filename=STORYBOARD_FILE, characters={}):
@@ -80,6 +126,7 @@ def load_storyboard(filename=STORYBOARD_FILE, characters={}):
         list[list[dict]]: A list of scene groups. Each group is a list of scene
                           dictionaries.
     """
+    print(f"Loading storyboard from {filename}...")
     groups = []
     current_group = []
     
@@ -87,33 +134,37 @@ def load_storyboard(filename=STORYBOARD_FILE, characters={}):
         print(f"⚠️  Storyboard file '{filename}' not found. Using empty list.")
         return []
 
-    with open(filename, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line: continue
-            
-            if line.startswith("#"):
-                if current_group:
-                    groups.append(current_group)
-                    current_group = []
-            elif line.startswith("-"):
-                raw_line = line[1:].strip()
-                
-                # Extract [IMAGE: path]
-                image_path = None
-                match = re.search(r'\[IMAGE:\s*(.*?)\]', raw_line, re.IGNORECASE)
-                if match:
-                    image_path = match.group(1).strip().strip('"').strip("'")
-                    raw_line = raw_line.replace(match.group(0), "").strip()
+    try:
+        lines = _load_text_file_robustly(filename)
+    except IOError as e:
+        print(f"❌ Error loading storyboard file: {e}")
+        return []
 
-                raw_prompt = raw_line
-                # Replace placeholders with actual character descriptions
-                try:
-                    prompt = raw_prompt.format(**characters)
-                except Exception as e:
-                    print(f"⚠️  Formatting error in storyboard line: {line}\n    Error: {e}")
-                    prompt = raw_prompt
-                current_group.append({"prompt": prompt, "image": image_path, "raw_line": raw_line})
+    for line in lines:
+        line = line.strip()
+        if not line: continue
+        
+        if line.startswith("#"):
+            if current_group:
+                groups.append(current_group)
+                current_group = []
+        elif line.startswith("-"):
+            raw_line = line[1:].strip()
+            
+            # Extract [IMAGE: path]
+            image_path = None
+            match = re.search(r'\[IMAGE:\s*(.*?)\]', raw_line, re.IGNORECASE)
+            if match:
+                image_path = match.group(1).strip().strip('"').strip("'")
+                raw_line = raw_line.replace(match.group(0), "").strip()
+
+            raw_prompt = raw_line
+            # Replace placeholders with actual character descriptions
+            # We'll do character substitution later in get_all_scenes to handle char images
+            # For now, just store the raw prompt with placeholders
+            prompt = raw_prompt 
+
+            current_group.append({"prompt": prompt, "image": image_path, "raw_line": raw_line})
     
     if current_group:
         groups.append(current_group)
@@ -224,7 +275,27 @@ def preprocess_image(image_path):
         return img_byte_arr.getvalue()
 
 
-def get_all_scenes(cast_file, storyboard_file, global_ref_image):
+def generate_qr_code(url: str, output_path: str, box_size: int = 10, border: int = 4):
+    """Generates a QR code image for a given URL and saves it to a file.
+
+    Args:
+        url (str): The URL to encode in the QR code.
+        output_path (str): The full path where the QR code image will be saved.
+        box_size (int): The size of each box (pixel) in the QR code.
+        border (int): The thickness of the border around the QR code.
+
+    Returns:
+        None
+    """
+    qr = qrcode.QRCode(
+        version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=box_size, border=border,
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    img.save(output_path)
+
+def get_all_scenes(cast_file, storyboard_file, global_cli_ref_image):
     """Loads and processes cast and storyboard files to return a flat list of scenes.
 
     This function orchestrates the loading of cast and storyboard data and then
@@ -235,44 +306,94 @@ def get_all_scenes(cast_file, storyboard_file, global_ref_image):
     Args:
         cast_file (str): Path to the cast markdown file.
         storyboard_file (str): Path to the storyboard markdown file.
-        global_ref_image (str | None): Path to the global reference image, if any.
+        global_cli_ref_image (str | None): Path to the global reference image from CLI, if any.
 
     Returns:
         list[dict]: A flattened list of scene dictionaries, ready for generation.
     """
     characters = load_cast(cast_file)
+    if not characters:
+        print("⚠️ No characters loaded. Character placeholders will not be substituted.")
+
     scene_groups = load_storyboard(storyboard_file, characters)
 
     all_scenes = []
     counter = 1
     for group in scene_groups:
         for scene_data in group:
+            # Substitute character descriptions into the prompt
+            final_prompt = scene_data["prompt"]
+            char_images_for_scene = []
+            for char_key, char_info in characters.items():
+                placeholder = f"{{{char_key}}}"
+                if placeholder in final_prompt:
+                    final_prompt = final_prompt.replace(placeholder, char_info["description"])
+                    if char_info.get("image_paths"):
+                        char_images_for_scene.extend(char_info["image_paths"])
+
+            qr_code_image_path = None
+            # Look for "qr code for https://..." in the prompt
+            qr_match = re.search(r'qr code for (https?://[^\s]+)', final_prompt, re.IGNORECASE)
+            if qr_match:
+                qr_url = qr_match.group(1)
+                qr_code_filename = f"qr_scene_{counter}.png"
+                qr_code_output_dir = os.path.join(os.path.dirname(storyboard_file), "qr_codes") # Save QR codes next to storyboard
+                os.makedirs(qr_code_output_dir, exist_ok=True)
+                qr_code_image_path = os.path.join(qr_code_output_dir, qr_code_filename)
+                
+                try:
+                    generate_qr_code(qr_url, qr_code_image_path)
+                    print(f"  - Generated QR code for '{qr_url}' at '{qr_code_image_path}'")
+                    final_prompt = final_prompt.replace(qr_match.group(0), "").strip() # Remove QR instruction from prompt
+                except Exception as e:
+                    print(f"  - ❌ Error generating QR code for '{qr_url}': {e}")
+                    qr_code_image_path = None # Don't use if generation failed
+
             all_scenes.append({
                 "id": str(counter), 
-                "prompt": scene_data["prompt"],
-                "image": scene_data.get("image"),
-                "raw_line": scene_data.get("raw_line", "") # Pass raw line for filename generation
+                "prompt": final_prompt,
+                "storyboard_image": scene_data.get("image"), # Image explicitly on the storyboard line
+                "character_images": char_images_for_scene,      # Images from a character definition
+                "raw_line": scene_data.get("raw_line", "")    # Pass raw line for filename generation
             })
+            if qr_code_image_path: all_scenes[-1]["qr_code_image"] = qr_code_image_path # Add QR image to scene data
             counter += 1
 
-    # Apply image logic to determine the effective reference image for each scene
+    # Determine the list of effective reference images for each scene
     for scene in all_scenes:
-        # The effective image is the one on the line itself, falling back to the global CLI argument.
-        effective_image = scene["image"]
+        effective_images = []
 
-        if effective_image is None:
-            effective_image = global_ref_image
-        
-        # Allow [IMAGE: none] to explicitly clear any reference image for this scene.
-        if effective_image and effective_image.lower() in ['none', 'clear', 'null']:
-            effective_image = None
+        # 1. Storyboard line image (highest precedence for location/backdrop)
+        if scene["storyboard_image"]:
+            effective_images.append(scene["storyboard_image"])
             
-        scene["effective_image"] = effective_image
+        # 2. QR Code image (if generated)
+        if scene.get("qr_code_image"):
+            effective_images.append(scene["qr_code_image"])
+            
+        # 2. Character images (for consistency)
+        if scene["character_images"]:
+            effective_images.extend(scene["character_images"])
+            
+        # 3. Global CLI reference image (lowest precedence)
+        if not effective_images and global_cli_ref_image:
+            effective_images.append(global_cli_ref_image)
+
+        # Remove duplicates while preserving order
+        seen = set()
+        effective_images = [x for x in effective_images if not (x in seen or seen.add(x))]
+        
+        # Handle explicit 'none'
+        if any(img.lower() in ['none', 'clear', 'null'] for img in effective_images):
+            effective_images = []
+            
+        # Limit to 3 images (API limit for Veo 3.1)
+        scene["effective_images"] = effective_images[:3]
     
     return all_scenes
 
 
-def generate_scene_with_veo(prompt: str, duration_seconds: int = 8, reference_image_path: str = None) -> bytes:
+def generate_scene_with_veo(prompt: str, duration_seconds: int = 8, reference_image_paths: list = None, generate_audio: bool = False) -> bytes:
     """Generates a single video scene using the Veo model on Vertex AI.
 
     This function handles the entire lifecycle of a single video generation request:
@@ -286,7 +407,8 @@ def generate_scene_with_veo(prompt: str, duration_seconds: int = 8, reference_im
     Args:
         prompt (str): The text prompt for the video generation.
         duration_seconds (int): The desired duration of the video in seconds.
-        reference_image_path (str | None): The file path to an optional reference image.
+        reference_image_paths (list | None): A list of file paths to optional reference images.
+        generate_audio (bool): Whether to generate audio for the video.
 
     Returns:
         bytes: The raw bytes of the generated MP4 video file.
@@ -314,7 +436,7 @@ def generate_scene_with_veo(prompt: str, duration_seconds: int = 8, reference_im
         duration_seconds=duration_seconds,
         aspect_ratio="16:9",
         resolution="720p",
-        generate_audio=False,
+        generate_audio=generate_audio,
         output_gcs_uri=GCS_BUCKET_URI,
         number_of_videos=1,
         # THE 'RESTRICTION' LEVERS:
@@ -324,14 +446,22 @@ def generate_scene_with_veo(prompt: str, duration_seconds: int = 8, reference_im
     )
     generation_kwargs["config"] = config
 
-    # Handle reference image if provided
-    if reference_image_path:
-        if not os.path.exists(reference_image_path):
-            raise FileNotFoundError(f"Reference image not found at: {reference_image_path}")
-        
-        print("    - ✅ Using reference image (preprocessing to 1080p)...")
-        image_bytes = preprocess_image(reference_image_path)
-        generation_kwargs["image"] = types.Image(image_bytes=image_bytes, mime_type="image/jpeg")
+    # Handle multiple reference images if provided
+    if reference_image_paths:
+        ref_images_config = []
+        for img_path in reference_image_paths:
+            if not os.path.exists(img_path):
+                raise FileNotFoundError(f"Reference image not found at: {img_path}")
+            
+            print(f"    - ✅ Using reference image: {os.path.basename(img_path)} (preprocessing to 1080p)...")
+            image_bytes = preprocess_image(img_path)
+            ref_images_config.append(
+                types.VideoGenerationReferenceImage(
+                    image=types.Image(image_bytes=image_bytes, mime_type="image/jpeg"),
+                    reference_type="asset"
+                )
+            )
+        config.reference_images = ref_images_config
 
     print("    - Sending prompt to the Veo API...")
     
@@ -431,6 +561,12 @@ def main():
     (all, a single one, or list), and then iterates through the generation
     loop. It manages dynamic reloading of storyboards, robust file existence
     checks, AI-based filename generation, and final summary reporting.
+
+    Args:
+        None (Parses command-line arguments from sys.argv).
+
+    Returns:
+        None
     """
     # --- 1. Argument Parsing ---
     parser = argparse.ArgumentParser(description="Generate a video scene using the Veo API (V3 - With Reference Image).")
@@ -438,6 +574,7 @@ def main():
     parser.add_argument("--run-all", action="store_true", help="Run all scenes sequentially.")
     parser.add_argument("--list-scenes", action="store_true", help="List all scenes and exit.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing video files.")
+    parser.add_argument("--generate-audio", action="store_true", help="Enable audio generation.")
     parser.add_argument("--duration", type=int, default=8, help="Duration of the generated video in seconds.")
     parser.add_argument("--resolution", type=str, default="720p", help="Resolution (ignored, always 720p).")
     parser.add_argument("--reference-image", type=str, help="Path to a reference image to use for the generation.")
@@ -456,10 +593,10 @@ def main():
     # Determine which scenes to run
     # This block handles the different run modes: --list-scenes, --run-all, or --scene-number.
     scenes_to_run = []
-    if args.list_scenes:
+    if args.list_scenes: # This path is for listing only, not for actual generation
         print(f"--- Scene List ({len(initial_scenes)} total) ---")
         for scene in initial_scenes:
-            img_info = f" [Ref: {scene['effective_image']}]" if scene['effective_image'] else ""
+            img_info = f" [Refs: {', '.join(scene['effective_images'])}]" if scene['effective_images'] else ""
             print(f"Scene {scene['id']}: {scene['prompt']}{img_info}")
         return
     elif args.run_all:
@@ -497,7 +634,7 @@ def main():
         # For run-all, reload the storyboard and cast to get the latest data for the current scene.
         # This allows for making changes to the .md files while the script is running.
         if args.run_all:
-            print(f"\n🔄 Reloading storyboard and cast files for Scene {scene_id}...")
+            print(f"\n🔄 Reloading storyboard and cast files for Scene {scene_id} (dynamic update)...")
             characters = load_cast(args.cast) # Reload cast for dynamic updates
         
         current_scene_list = get_all_scenes(args.cast, args.storyboard, args.reference_image)
@@ -534,9 +671,9 @@ def main():
         # --- c. Filename Generation (only if not skipping) ---
         # Calls the AI to generate a professional filename, with a fallback to a simple slug.
         prompt = scene_data["prompt"]
-        ref_image = scene_data["effective_image"]
+        ref_images = scene_data["effective_images"]
         raw_line = scene_data["raw_line"]
-        
+
         ai_filename = generate_scene_filename(raw_line, int(scene_id), characters)
         
         if ai_filename:
@@ -544,11 +681,12 @@ def main():
         else:
             slug = create_prompt_slug(prompt)
             output_filename = os.path.join(args.output_dir, f"scene_{scene_id}_{slug}.mp4")
+            print(f"    - Fallback slug filename: {os.path.basename(output_filename)}")
             
         print(f"\n🎬 Generating Scene {scene_id}...")
         print(f"    - Prompt: \"{prompt}\"")
-        if ref_image:
-            print(f"    - Reference Image: {ref_image}")
+        if ref_images:
+            print(f"    - Reference Images: {', '.join([os.path.basename(img) for img in ref_images])}")
         print(f"    - Output file: {output_filename}")
 
         # --- d. Video Generation and Error Handling ---
@@ -557,7 +695,8 @@ def main():
             video_bytes = generate_scene_with_veo(
                 prompt,
                 duration_seconds=args.duration,
-                reference_image_path=ref_image
+                reference_image_paths=ref_images,
+                generate_audio=args.generate_audio
             )
         except RuntimeError as e:
             # Gracefully handle safety filter blocks without crashing the whole script.

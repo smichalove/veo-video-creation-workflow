@@ -8,7 +8,9 @@ This repository provides a template for setting up your own automated video crea
 
 This repository contains several versions of the generation script, showing the evolution of the workflow. For new projects, you should almost always use `generate_veo_video_v3.py`.
 
-*   **`generate_veo_video_v3.py` (Recommended)**: The primary, most advanced script. It supports reference images, AI-powered filenaming (with a hardcoded `EVO_` prefix), dynamic reloading, and is fully configurable via the command line. **The rest of this README focuses on this script.**
+*   **`generate_veo_video_v4.py` (Advanced Workflow)**: Our newest iteration. Includes all features of v3 but adds powerful logic to group multiple adjacent storyboard bullet points into sequential scenes. This is ideal for when you want a single scene to unfold across multiple generated shots.
+
+*   **`generate_veo_video_v3.py` (Standard Recommended)**: The primary, highly-stable script. It supports reference images, AI-powered filenaming, dynamic reloading, and is fully configurable via the command line. **The rest of this README primarily focuses on this script, though v4 shares the same configuration.**
 
 *   **`generate_veo_video_v2.py` (Legacy)**: A simpler version that reads external `storyboard.md` and `cast.md` files but lacks support for reference images and advanced filenaming. It outputs files like `veo_scene_1.mp4`.
 
