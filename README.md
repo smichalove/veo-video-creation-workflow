@@ -1,8 +1,21 @@
 # Veo Batch Video Generation Workflow
 
-`generate_veo_video_v3.py` is a powerful, command-line Python script designed to automate the batch generation of cinematic video scenes using Google's Veo model via the Vertex AI SDK. It streamlines the creative workflow by reading scene descriptions and character details from simple markdown files, managing the entire generation process, and organizing the output.
+![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
+![Google Cloud Platform](https://img.shields.io/badge/Google%20Cloud-Vertex%20AI-4285F4?logo=google-cloud)
+![Gemini](https://img.shields.io/badge/Powered%20By-Gemini-8E75B2)
 
-This repository provides a template for setting up your own automated video creation pipeline.
+`generate_veo_video_v3.py` and its advanced counterpart `generate_veo_video_v4.py` are powerful, command-line Python scripts designed to automate the batch generation of cinematic video scenes using Google's cutting-edge **Veo** model via the **Vertex AI SDK**. 
+
+These scripts streamline the creative workflow by reading scene descriptions and character details from simple markdown files (`storyboard.md`, `cast.md`), managing the entire generation process, and organizing the output.
+
+This repository provides a complete, open-source template for setting up your own automated video creation pipeline.
+
+## Why Use This Workflow?
+
+* **Stop Click-and-Waiting**: Instead of manually generating one video at a time in a web interface, write your entire film's script in Markdown and let your computer render it all overnight.
+* **Character Consistency**: Define your cast once and inject them into any scene using simple variables like `{HERO_DESC}`.
+* **Prompt Optimization**: The advanced `v4` script automatically uses Gemini to rewrite and optimize your human-readable prompts into language that the Veo video model understands best.
+* **Cost Efficiency**: Configurable options to skip audio generation or control video length help you manage your Vertex AI credits.
 
 ## Which Script to Use?
 
