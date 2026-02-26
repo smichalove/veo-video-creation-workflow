@@ -127,6 +127,23 @@ List each scene with a leading `-`. Use `{KEYS}` from your cast file. Specify re
 - [IMAGE: path/to/ref.jpg] At dusk, {MARIA_DESC} performs a daring trick...
 ```
 
+#### `gemini_prompt_config.txt` (Optional, v4 only)
+If using `generate_veo_video_v4.py`, you can place this text file in the same directory to customize exactly how Gemini rewrites your prompts for Veo. If this file is not found, the script will fall back to a hardcoded default instruction.
+```text
+You are an expert video director. Please convert this storyboard into the most visually descriptive, cinematic prompt possible for Google Veo...
+```
+
+#### `storyboard.md`
+List each scene with a leading `-`. Use `{KEYS}` from your cast file. Specify reference images with `[IMAGE: "path"]`.
+```markdown
+# --- ACT 1 ---
+# Scene 1
+- {JESSE_DESC} bursts from the chute on her horse, racing against the clock...
+
+# Scene 2
+- [IMAGE: path/to/ref.jpg] At dusk, {MARIA_DESC} performs a daring trick...
+```
+
 ## Usage
 
 Run the script from your terminal using `python`.
